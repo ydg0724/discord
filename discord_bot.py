@@ -12,4 +12,4 @@ async def on_ready():   #봇이 시작될 때 실행되는 이벤트함수
 async def hello(message):   #hello를 입력했을 때 실행되는 함수
     await message.channel.send('Hi!')
     
-bot.run(token)
+bot.run(token) #to.py에서 가져온 토큰 값
