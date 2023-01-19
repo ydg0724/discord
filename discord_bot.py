@@ -44,7 +44,6 @@ async def 주사위(message):
 #async def join(message):
     
     
-    
 @bot.event
 async def on_command_error(message,error):  #존재하지 않는 명령어를 입력할 때
     if isinstance(error,commands.CommandNotFound):
