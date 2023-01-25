@@ -90,9 +90,9 @@ def play_next(ctx):
             del song_queue[0]
             vc.play(discord.FFmpegPCMAudio(URL,**FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
     
-    #else:
-    #   if not vc.is_playing():
-    #        client.loop.create_task(vc.disconnect())
+    else:
+       if not vc.is_playing():
+            vc.disconnect()
                
 """def URLPLAY(url):
     YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
@@ -160,7 +160,7 @@ async def quit(message):
     except:
         await message.send("봇이 음성채널에 접속해있지 않습니다")
         
-@bot.command()
+@bot.command(aliases = ['P'])
 async def p(ctx,*,url):
     try:        #자동입장 코드
         global vc
