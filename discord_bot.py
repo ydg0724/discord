@@ -368,13 +368,14 @@ async def list(ctx):
         
         await ctx.send(embed = discord.Embed(title = "노래목록",description=Text.strip(),color=0x00ff00))
   
-@bot.event
-async def on_command_error(message,error):  #존재하지 않는 명령어를 입력할 때
-    if isinstance(error,commands.CommandNotFound):
-        await message.send("명령어를 찾지 못했습니다.")
 
 @bot.command()
 async def test(ctx):
     await ctx.send(ctx)
+    
+@bot.event
+async def on_command_error(message,error):  #존재하지 않는 명령어를 입력할 때
+    if isinstance(error,commands.CommandNotFound):
+        await message.send("명령어를 찾지 못했습니다.")
     
 bot.run(token) #to.py에서 가져온 토큰 값
