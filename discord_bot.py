@@ -173,21 +173,26 @@ async def p(ctx,*,url):
         except:
             return
     
-    source
     
-    if ctx.startswith("https://www.youtube.com/playlist?"):
-        playlist_id = source.replace("https://www.youtube.com/playlist?list=", "")
-        feed = feedparser.parse(f"https://www.youtube.com/feeds/videos.xml?playlist_id={playlist_id}")
-        entries = feed.entries
-        hinzu = ""
-        c = 0
-        for entry in entries:
-            c += 1
-            if c % 2 == 0:
-                await ctx.channel.trigger_typing()
-            await asyncio.sleep(0.1)
+   #if ctx.startswith("https://www.youtube.com/playlist?"):
+   #     playlist_id = source.replace("https://www.youtube.com/playlist?list=", "")
+   #     feed = feedparser.parse(f"https://www.youtube.com/feeds/videos.xml?playlist_id={playlist_id}")
+   #     entries = feed.entries
+   #     hinzu = ""
+   #     c = 0
+    #    for entry in entries:
+    #        c += 1
+   #         if c % 2 == 0:
+   #             await ctx.channel.trigger_typing()
+    #        await asyncio.sleep(0.1)
+    #        i = entry["link"]
+    #        music_count +=1  
+    
+    if url.startswith("https://www.youtube.com/playlist?"):
+        YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
+        FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
                 
-    elif len(url)>30:
+    if len(url)>30:
         YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
     
