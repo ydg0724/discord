@@ -162,6 +162,29 @@ async def quit(message):
     except:
         await message.send("봇이 음성채널에 접속해있지 않습니다")
         
+        
+@bot.command()
+async def test(ctx,*,url):
+    try:        #자동입장 코드
+        global vc
+        vc = await ctx.message.author.voice.channel.connect()
+    except:
+        try:
+            await vc.move_to(ctx.message.author.voice.channel)
+        except:
+            return
+        
+    if url.startswith("https://www.youtube.com/playlist?"):
+        YDL_OPTIONS = {'format' : 'bestaudio','yesplaylist':'True'} #youtube_dl 기본설정
+        FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
+        
+        
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+        URL = info['formats'][0]['url']
+        
+        await ctx.send(URL)
+        
 @bot.command(aliases = ['P'])
 async def p(ctx,*,url):
     try:        #자동입장 코드
@@ -189,18 +212,28 @@ async def p(ctx,*,url):
     #        music_count +=1  
     
     if url.startswith("https://www.youtube.com/playlist?"):
-        YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
+        YDL_OPTIONS = {'format' : 'bestaudio','yesplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
-                
-    if len(url)>30:
+        
+        with YoutubeDL(YDL_OPTIONS) as ydl:
+            info = ydl.extract_info(url, download=False)
+        URL = info['formats'][1]['url']
+        
+        await ctx.send(URL)
+        vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION))
+        await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+url + "을(를) 재생하는 중",color= 0x00ff00))
+        
+    #다운로드 받은 플레이 리스트를 리스트에 넣어서 순서대로 실행??
+    elif len(url)>30:
         YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
     
         if not vc.is_playing():
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
-            URL = info['formats'][0]['url']
+            URL = info['formats'][1]['url']
             vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION))
+            #await ctx.send(URL)
             await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+url + "을(를) 재생하는 중",color= 0x00ff00))
             
         else:
@@ -233,13 +266,15 @@ async def p(ctx,*,url):
             musicurl = entireNum.get('href')
             url = 'https://www.youtube.com'+musicurl
             driver.quit()
-        
+    
+            
             musicnow.insert(0, entireText)
             #노래 재생 코드
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 info = ydl.extract_info(url, download=False)
             URL = info['formats'][0]['url']
             await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
+            
             vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
             
         else:
@@ -390,9 +425,9 @@ async def list(ctx):
         await ctx.send(embed = discord.Embed(title = "노래목록",description=Text.strip(),color=0x00ff00))
   
 
-@bot.command()
-async def test(ctx):
-    await ctx.send(ctx)
+#@bot.command()
+#async def test(ctx):
+   # await ctx.send(ctx)
     
 @bot.event
 async def on_command_error(message,error):  #존재하지 않는 명령어를 입력할 때
