@@ -185,9 +185,11 @@ async def test(ctx,*,url):
         source = driver.page_source
         bs = bs4.BeautifulSoup(source, 'lxml')
         entire = bs.find_all('a',{'id': 'video-title'})
-        for urls in range(entire):
+        i=0
+        for urls in range(entire[i]):
             print(urls)
             #info_url.append(urls)
+            i = i+1
         
         entireNum = entire[0]
         entireText = entireNum.text.strip() #영상제목
