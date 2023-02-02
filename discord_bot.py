@@ -92,9 +92,9 @@ def play_next(ctx):
             del song_queue[0]
             vc.play(discord.FFmpegPCMAudio(URL,**FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
     
-    else:
-       if not vc.is_playing():
-            vc.disconnect()
+    #else:
+    #   if not vc.is_playing():
+    #        vc.disconnect()
                
 """def URLPLAY(url):
     YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
@@ -185,17 +185,13 @@ async def test(ctx,*,url):
         source = driver.page_source
         bs = bs4.BeautifulSoup(source, 'lxml')
         entire = bs.find_all('a',{'id': 'video-title'})
-        i=0
-        for urls in range(entire[i]):
-            print(urls)
-            #info_url.append(urls)
-            i = i+1
         
+        await ctx.send(embed = discord.Embed(title = '재생목록 추가'))    
         entireNum = entire[0]
         entireText = entireNum.text.strip() #영상제목
         musicurl = entireNum.get('href')
         url = 'https://www.youtube.com'+musicurl
-        driver.quit()
+        #driver.quit()
     
         musicnow.insert(0, entireText)
         #노래 재생 코드
@@ -205,6 +201,25 @@ async def test(ctx,*,url):
         await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
             
         vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
+        
+        i=1
+        while(i < len(entire)):
+            #info_url.append(entire[i])
+            name = entire[i].text.strip()   #영상제목
+            musicurl = entire[i].get('href')
+            urls = 'https://www.youtube.com' + musicurl
+            user.append(name)
+            musictitle.append(name)
+            musicnow.append(name)
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(urls, download=False)
+            URL = info['formats'][0]['url']
+            #result,URLTEST = title(urls)
+            song_queue.append(URL)
+            i = i+1
+        
+        
+        
         
     else:
         user.append(url)
