@@ -1,19 +1,14 @@
 import discord
 import random
-import time
-import asyncio
 import bs4
 from discord.ext import commands
 from to import token
 from youtube_dl import YoutubeDL
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from discord.utils import get
 from discord import FFmpegPCMAudio
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-import feedparser
 
 bot = commands.Bot(command_prefix="!",intents=discord.Intents.all()) #명령어 실행조건
 client = discord.Client(intents=discord.Intents.all())
@@ -54,16 +49,6 @@ def title(ctx):
     driver.quit()
     
     return music,URL
-
-def join(ctx):
-    try:
-        global vc
-        vc = ctx.message.author.voice.channel.connect()
-    except:
-        try:
-            vc.move_to(ctx.message.author.voice.channel)
-        except:
-            ctx.send("음성채널에 유저가 접속해있지 않습니다.")
 
 def play(ctx):
     global vc
@@ -162,7 +147,48 @@ async def quit(message):
     except:
         await message.send("봇이 음성채널에 접속해있지 않습니다")
         
-        
+@bot.command()
+async def shuffle(ctx):
+        try:
+            global musicnow, user, musictitle,song_queue
+            numbershuffle = len(musicnow) - len(user)
+            for i in range(numbershuffle):
+                shuffle.append(musicnow[0])
+                del musicnow[0]
+            combine = list(zip(user, musicnow, musictitle, song_queue))
+            random.shuffle(combine)
+            a, b, c, d = list(zip(*combine))
+
+            user = list(a)
+            musicnow = list(b)
+            musictitle = list(c)
+            song_queue = list(d)
+
+            for i in range(numbershuffle):
+                musicnow.insert(0, shuffle[i])
+
+            del shuffle[:]
+            await ctx.send("목록이 정상적으로 셔플되었습니다.")
+        except:
+            await ctx.send("셔플할 목록이 없습니다!")            
+
+@bot.command()
+async def restart(ctx):
+
+    YDL_OPTIONS = {'format': 'bestaudio', 'noplaylist':'True'}
+    FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5', 'options': '-vn'}
+    
+    if len(user) == 0:
+        await ctx.send("등록된 노래가 없습니다.")
+    else:
+        if len(musicnow) - len(user) >= 1:
+            for i in range(len(musicnow) - len(user)):
+                del musicnow[0]
+        if not vc.is_playing():
+            play(ctx)
+        else:
+            await ctx.send("노래가 이미 재생되고 있습니다.")
+
 @bot.command()
 async def test(ctx,*,url):
     try:        #자동입장 코드
@@ -173,60 +199,73 @@ async def test(ctx,*,url):
             await vc.move_to(ctx.message.author.voice.channel)
         except:
             return
-        
+        # error 확인, 다른 곡 재생되고있을 때(else문) -> 처음곡 실행하지 않고 바로 list로 삽입, youtube mix 재생, 맨처음 실행하고 playlist를 넣을 때 song_queue에 아무것도 없는 것 -> 바로 처리
     if url.startswith("https://www.youtube.com/playlist?"):
         YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
         global entireText
         info_url = []
         
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
-        driver.get(url) 
-        source = driver.page_source
-        bs = bs4.BeautifulSoup(source, 'lxml')
-        entire = bs.find_all('a',{'id': 'video-title'})
-        
-        await ctx.send(embed = discord.Embed(title = '재생목록 추가'))    
-        entireNum = entire[0]
-        entireText = entireNum.text.strip() #영상제목
-        musicurl = entireNum.get('href')
-        url = 'https://www.youtube.com'+musicurl
-        #driver.quit()
-    
-        musicnow.insert(0, entireText)
-        #노래 재생 코드
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        URL = info['formats'][0]['url']
-        await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
+        if not vc.is_playing(): #노래가 재생되고있지 않을 때
             
-        vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
+            driver.get(url) 
+            source = driver.page_source
+            bs = bs4.BeautifulSoup(source, 'lxml')
+            entire = bs.find_all('a',{'id': 'video-title'})
         
-        i=1
-        while(i < len(entire)):
-            #info_url.append(entire[i])
-            name = entire[i].text.strip()   #영상제목
-            musicurl = entire[i].get('href')
-            urls = 'https://www.youtube.com' + musicurl
-            user.append(name)
-            musictitle.append(name)
-            musicnow.append(name)
+            #첫 번째 노래 먼저 실행
+            entireNum = entire[0]
+            entireText = entireNum.text.strip() #영상제목
+            musicurl = entireNum.get('href')
+            url = 'https://www.youtube.com'+musicurl
+            musicnow.insert(0, entireText)
+            
+            #노래 재생 코드
             with YoutubeDL(YDL_OPTIONS) as ydl:
-                info = ydl.extract_info(urls, download=False)
+                info = ydl.extract_info(url, download=False)
             URL = info['formats'][0]['url']
-            #result,URLTEST = title(urls)
-            song_queue.append(URL)
-            i = i+1
+            await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
+            
+            vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
         
-        
-        
-        
-    else:
-        user.append(url)
-        result, URLTEST = title(url)
-        song_queue.append(URLTEST)
-        await ctx.send(embed = discord.Embed(title="목록 추가",description=result + "을(를) 목록에 추가했습니다."))
-        
+            i=1
+            while(i < len(entire)): #모든 재생목록 불러오기
+                name = entire[i].text.strip()   #영상제목
+                musicurl = entire[i].get('href')
+                urls = 'https://www.youtube.com' + musicurl
+                user.append(name)
+                musictitle.append(name)
+                musicnow.append(name)
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(urls, download=False)
+                URL = info['formats'][0]['url']
+            
+                song_queue.append(URL)
+                i = i+1
+            await ctx.send(embed = discord.Embed(title = '재생목록 추가'))
+        else:
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
+            driver.get(url) 
+            source = driver.page_source
+            bs = bs4.BeautifulSoup(source, 'lxml')
+            entire = bs.find_all('a',{'id': 'video-title'})
+            
+            i=0
+            while(i < len(entire)): #모든 재생목록 불러오기
+                name = entire[i].text.strip()   #영상제목
+                musicurl = entire[i].get('href')
+                urls = 'https://www.youtube.com' + musicurl
+                user.append(name)
+                musictitle.append(name)
+                musicnow.append(name)
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(urls, download=False)
+                URL = info['formats'][0]['url']
+            
+                song_queue.append(URL)
+                i = i+1
+            
 @bot.command(aliases = ['P'])
 async def p(ctx,*,url):
     try:        #자동입장 코드
@@ -243,38 +282,70 @@ async def p(ctx,*,url):
     if url.startswith("https://www.youtube.com/playlist?"):
         YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
+        info_url = []
         
-        
-        #검색어의 주소 가져오기
-        #chromedriver_dir = r"C:\Users\Yang Dong Gyun\Desktop\study\chromedriver_win32\chromedriver.exe"   #chromedriver.exe가 위치한 경로
-        #driver = webdriver.Chrome(chromedriver_dir)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
-        driver.get(url) 
-        source = driver.page_source
+        if not vc.is_playing(): #노래가 재생되고있지 않을 때
             
-        #Options = webdriver.ChromeOptions()
-        #Options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        bs = bs4.BeautifulSoup(source, 'lxml')
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
+            driver.get(url) 
+            source = driver.page_source
+            bs = bs4.BeautifulSoup(source, 'lxml')
+            entire = bs.find_all('a',{'id': 'video-title'})
         
-        entire = bs.find_all('a',{'id': 'video-title'})
-        entireNum = entire[0]
-        entireText = entireNum.text.strip() #영상제목
-        musicurl = entireNum.get('href')
-        url = 'https://www.youtube.com'+musicurl
-        driver.quit()
+            #첫 번째 노래 먼저 실행
+            entireNum = entire[0]
+            entireText = entireNum.text.strip() #영상제목
+            musicurl = entireNum.get('href')
+            url = 'https://www.youtube.com'+musicurl
+        
     
+            musicnow.insert(0, entireText)
+            #노래 재생 코드
+            with YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(url, download=False)
+            URL = info['formats'][0]['url']
+            await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
             
-        musicnow.insert(0, entireText)
-        #노래 재생 코드
-        with YoutubeDL(YDL_OPTIONS) as ydl:
-            info = ydl.extract_info(url, download=False)
-        URL = info['formats'][0]['url']
-        await ctx.send(embed = discord.Embed(title= "노래 재생", description= "현재 "+ musicnow[0] + "을(를) 재생하는 중",color= 0x00ff00))
-            
-        vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
+            vc.play(FFmpegPCMAudio(URL, **FFMPEG_OPTION), after = lambda e: play_next(ctx))
         
-    #다운로드 받은 플레이 리스트를 리스트에 넣어서 순서대로 실행??
-    elif len(url)>30:
+            i=1
+            while(i < len(entire)): #모든 재생목록 불러오기
+                name = entire[i].text.strip()   #영상제목
+                musicurl = entire[i].get('href')
+                urls = 'https://www.youtube.com' + musicurl
+                user.append(name)
+                musictitle.append(name)
+                musicnow.append(name)
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(urls, download=False)
+                URL = info['formats'][0]['url']
+            
+                song_queue.append(URL)
+                i = i+1
+            await ctx.send(embed = discord.Embed(title = '재생목록 추가'))
+        else:
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install())) #새로운 방식? 4.0이상 -> 자동으로 chromedriver 경로를 잡아준다.
+            driver.get(url) 
+            source = driver.page_source
+            bs = bs4.BeautifulSoup(source, 'lxml')
+            entire = bs.find_all('a',{'id': 'video-title'})
+            
+            i=0
+            while(i < len(entire)): #모든 재생목록 불러오기
+                name = entire[i].text.strip()   #영상제목
+                musicurl = entire[i].get('href')
+                urls = 'https://www.youtube.com' + musicurl
+                user.append(name)
+                musictitle.append(name)
+                musicnow.append(name)
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    info = ydl.extract_info(urls, download=False)
+                URL = info['formats'][0]['url']
+            
+                song_queue.append(URL)
+                i = i+1
+        
+    elif len(url)>30:   #url로 음악을 찾는 경우
         YDL_OPTIONS = {'format' : 'bestaudio', 'noplaylist':'True'} #youtube_dl 기본설정
         FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'} #ffmpeg 기본설정
     
@@ -293,7 +364,7 @@ async def p(ctx,*,url):
             await ctx.send(embed = discord.Embed(title="목록 추가",description=result + "을(를) 목록에 추가했습니다."))
             
     
-    else:
+    else:   #유튜브 검색으로 음악을 찾는 경우
         if not vc.is_playing():
             options = webdriver.ChromeOptions() #크롬 창 안띄우는거? (동작 x)
             options.add_argument("headless")
