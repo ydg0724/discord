@@ -10,7 +10,7 @@ from discord import FFmpegPCMAudio
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-bot = commands.Bot(command_prefix="!",intents=discord.Intents.all()) #명령어 실행조건
+bot = commands.Bot(command_prefix="!",intents=discord.Intents.all(), help_command=None) #명령어 실행조건
 client = discord.Client(intents=discord.Intents.all())
 
 user = []       #유저가 입력한 노래 정보
@@ -77,12 +77,15 @@ def play_next(ctx):
             del song_queue[0]
             vc.play(discord.FFmpegPCMAudio(URL,**FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
                
-       
 
 @bot.event #이벤트 함수 생성, async : 비동기로 실행되는 함수
 async def on_ready():   #봇이 시작될 때 실행되는 이벤트함수
     print(f'{bot.user.name} 연결 성공!')
     await bot.change_presence(status=discord.Status.online, activity=None) #activity는 상태창
+
+@bot.command()
+async def help(ctx):
+    await ctx.send(embed = discord.Embed(title="명령어 종류",description= "p or P : 음악을 재생합니다.\nlist : 재생목록을 보여줍니다.\ndel_list n : n번째 재생목록을 제거합니다.\ndel_all : 모든 재생목록을 삭제합니다.",color=0x00ff00))    
     
 @bot.command()      #주사위
 async def 주사위(message):
@@ -348,12 +351,6 @@ async def stop(ctx):
     except:
         await ctx.send("실행중인 노래가 없습니다.")
         
-@bot.command()  #목록추가
-async def add_list(ctx,*,msg):
-    user.append(msg)
-    result,URLS = title(msg)
-    song_queue.append(URLS)
-    await ctx.send(result + "를 대기목록에 추가했습니다.")
     
 @bot.command()  #목록삭제
 async def del_list(ctx,*,num):
