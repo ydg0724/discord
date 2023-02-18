@@ -174,7 +174,7 @@ async def restart(ctx):
 
 
             
-@bot.command(aliases = ['P'])
+@bot.command(aliases = ['P','ㅔ'])
 async def p(ctx,*,url):
     try:        #자동입장 코드
         global vc
