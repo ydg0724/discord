@@ -1,8 +1,13 @@
 import discord
 import random
 import bs4
+import os
+import openai
+import asyncio
+#import yt_dlp as YoutubeDL
 from discord.ext import commands
 from to import token
+from to import aitoken
 from youtube_dl import YoutubeDL
 from selenium import webdriver
 from discord.utils import get
@@ -12,12 +17,17 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 bot = commands.Bot(command_prefix="!",intents=discord.Intents.all(), help_command=None) #명령어 실행조건
 client = discord.Client(intents=discord.Intents.all())
+openai.api_key = aitoken
 
 user = []       #유저가 입력한 노래 정보
 musictitle = [] #가공된 정보의 노래 제목
 song_queue = [] #가공된 정보의 노래 링크
 musicnow = []   #현재 출력되는 노래 배열
 
+@bot.event #이벤트 함수 생성, async : 비동기로 실행되는 함수
+async def on_ready():   #봇이 시작될 때 실행되는 이벤트함수
+    print(f'{bot.user.name} 연결 성공!')
+    await bot.change_presence(status=discord.Status.online, activity=None) #activity는 상태창
 
 def title(ctx):
     global musictitle
@@ -77,11 +87,29 @@ def play_next(ctx):
             del song_queue[0]
             vc.play(discord.FFmpegPCMAudio(URL,**FFMPEG_OPTIONS), after=lambda e: play_next(ctx))
                
+def chatgpt_response(prompt): #chatgpt 불러오는 메소드
+    response = openai.Completion.create(
+        model = 'text-davinci-003',
+        prompt = prompt,
+        temperature=1,
+        max_tokens = 2000
+    )
+    response_dict = response.get('choices')
+    if response_dict and len(response_dict)>0:
+        prompt_response = response_dict[0]['text']
+    return prompt_response
 
-@bot.event #이벤트 함수 생성, async : 비동기로 실행되는 함수
-async def on_ready():   #봇이 시작될 때 실행되는 이벤트함수
-    print(f'{bot.user.name} 연결 성공!')
-    await bot.change_presence(status=discord.Status.online, activity=None) #activity는 상태창
+@bot.command(aliases = ['먀'])
+async def ai(message,*,ctx):
+    print(ctx)
+    if message.author == bot.user:
+        return
+    
+    bot_response = chatgpt_response(prompt=ctx)
+    await asyncio.sleep(10)
+    print(bot_response)
+    await message.send(embed = discord.Embed(title = 'answer',description=bot_response,color=0x00ff00))
+          
 
 @bot.command()
 async def help(ctx):
@@ -126,8 +154,8 @@ async def quit(message):
         
 @bot.command()
 async def shuffle(ctx):
+        #await shuf(ctx)
         try:
-            
             global musicnow, user, musictitle,song_queue
             
             numbershuffle = len(musicnow) - len(user)
@@ -153,7 +181,7 @@ async def shuffle(ctx):
             del shuffle[:]
             await ctx.send("목록이 정상적으로 셔플되었습니다.")
         except:
-            await ctx.send("셔플할 목록이 없습니다!")            
+            await ctx.send("셔플할 목록이 없습니다!")          
 
 @bot.command()
 async def restart(ctx):
@@ -171,7 +199,6 @@ async def restart(ctx):
             play(ctx)
         else:
             await ctx.send("노래가 이미 재생되고 있습니다.")
-
 
             
 @bot.command(aliases = ['P','ㅔ'])
@@ -278,7 +305,7 @@ async def p(ctx,*,url):
             options.add_argument("headless")
         
             
-            YDL_OPTIONS = {'format' : 'bestaudio','noplaylist':'True'}  #youtube_dl 기본설정    
+            YDL_OPTIONS = {'format' : 'bestaudio/best','noplaylist':'True'}  #youtube_dl 기본설정    
             FFMPEG_OPTION = {'before_options' : '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5','options':'-vn'}    #ffmpeg 기본설정
             #검색어의 주소 가져오기
             chromedriver_dir = r"C:\Users\Yang Dong Gyun\Desktop\study\chromedriver_win32\chromedriver.exe"   #chromedriver.exe가 위치한 경로
@@ -454,6 +481,7 @@ async def test(ctx,*,url):
             result, URLTEST = title(url)
             song_queue.append(URLTEST)
             await ctx.send(embed = discord.Embed(title="목록 추가",description=result + "을(를) 목록에 추가했습니다."))    
+
 @bot.command()
 async def del_all(ctx):
     try:
